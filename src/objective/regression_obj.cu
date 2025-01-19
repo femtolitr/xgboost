@@ -455,10 +455,12 @@ class CoxRegression : public FitIntercept {
     for (omp_ulong i = 0; i < ndata; ++i) { // NOLINT(*)
       const size_t ind = label_order[i];
       const double p = preds_h[ind];
-      const double exp_p = std::exp(p);
+      // const double exp_p = std::exp(p);
       const double w = info.GetWeight(ind);
       const double y = labels(ind);
       const double abs_y = std::abs(y);
+      const double abs_p_y = std::abs(y);
+      const double exp_p = std::exp(p * abs_p_y);
 
       // only update the denominator after we move forward in time (labels are sorted)
       // this is Breslow's method for ties
@@ -476,8 +478,8 @@ class CoxRegression : public FitIntercept {
         s_k += 1.0/(exp_p_sum*exp_p_sum);
       }
 
-      const double grad = exp_p*r_k - static_cast<bst_float>(y > 0);
-      const double hess = exp_p * r_k - exp_p * exp_p * s_k;
+      const double grad = (exp_p*r_k - static_cast<bst_float>(y > 0))*abs_p_y;
+      const double hess = (exp_p * r_k - exp_p * exp_p * s_k)*abs_p_y**2;
       gpair(ind) = GradientPair(grad * w, hess * w);
 
       last_abs_y = abs_y;
